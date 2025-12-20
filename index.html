@@ -8,7 +8,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@400;700&display=swap" rel="stylesheet">
 </head>  
-<body>  
+<body class="is-preloading">  
+    <div id="loading-overlay" role="status" aria-live="polite">
+        <div class="loading-content">
+            <p class="important-text">Warming up the cocoa...</p>
+            <p class="loading-note">We'll show the tree once every ornament is ready.</p>
+        </div>
+    </div>
     <div id="header">  
         <h1 class="important-text">Haxmas Day 7</h1>  
         <h2 id="date"></h2>  

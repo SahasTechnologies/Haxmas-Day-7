@@ -19,6 +19,9 @@ const baubleImages = [
     "images/ornaments/10.png"
 ];
 
+const treeImage = "images/tree.png";
+const baublePlacements = [];
+
 let treeMaskCanvas = null;
 let treeMaskCtx = null;
 let treeMaskReady = false;
@@ -26,6 +29,7 @@ let treeMaskReady = false;
 function clearDecorations() {
     const decorationsContainer = document.getElementById('decorations');
     decorationsContainer.innerHTML = '';
+    baublePlacements.length = 0;
 }
 
 function randomBetween(min, max) {
@@ -82,17 +86,16 @@ function samplePointOnTreeImage() {
 
 function addBauble() {
     const decorationsContainer = document.getElementById('decorations');
+    const container = document.getElementById('tree-container');
+    const containerRect = container.getBoundingClientRect();
     const img = document.createElement('img');
     img.className = 'ornament';
     img.alt = 'Bauble ornament';
 
     const randomImg = baubleImages[Math.floor(Math.random() * baubleImages.length)];
+
     img.src = randomImg;
     img.dataset.imageSrc = randomImg;
-
-    const { xPercent, yPercent } = samplePointOnTreeImage();
-    img.style.left = `${xPercent}%`;
-    img.style.top = `${yPercent}%`;
 
     const tree = document.getElementById('tree');
     const treeRect = tree.getBoundingClientRect();
@@ -103,11 +106,28 @@ function addBauble() {
     img.style.width = `${size}px`;
     img.style.height = `${size}px`;
 
+    let placement = null;
+    for (let attempt = 0; attempt < 250; attempt++) {
+        const candidate = samplePointOnTreeImage();
+        if (!overlapsExistingBauble(candidate, size, containerRect)) {
+            placement = candidate;
+            break;
+        }
+    }
+
+    if (!placement) {
+        return;
+    }
+
+    img.style.left = `${placement.xPercent}%`;
+    img.style.top = `${placement.yPercent}%`;
+
     const rotation = randomBetween(-20, 20);
     img.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
 
     img.addEventListener('click', function () {
         const currentRelativeSrc = this.dataset.imageSrc;
+
         let newRelativeSrc = currentRelativeSrc;
         while (newRelativeSrc === currentRelativeSrc) {
             newRelativeSrc = baubleImages[Math.floor(Math.random() * baubleImages.length)];
@@ -122,6 +142,11 @@ function addBauble() {
     });
 
     decorationsContainer.appendChild(img);
+    baublePlacements.push({
+        xPercent: placement.xPercent,
+        yPercent: placement.yPercent,
+        size
+    });
 }
 
 function positionStarOnTreeTip() {
@@ -213,7 +238,62 @@ function decorateTree() {
     }
 }
 
+function overlapsExistingBauble(candidate, sizePx, containerRect) {
+    if (!containerRect || containerRect.width === 0 || containerRect.height === 0) {
+        return false;
+    }
+
+    const padding = 6;
+    const xPx = (candidate.xPercent / 100) * containerRect.width;
+    const yPx = (candidate.yPercent / 100) * containerRect.height;
+    const radius = sizePx / 2;
+
+    for (const placement of baublePlacements) {
+        const otherX = (placement.xPercent / 100) * containerRect.width;
+        const otherY = (placement.yPercent / 100) * containerRect.height;
+        const otherRadius = placement.size / 2;
+        const dx = xPx - otherX;
+        const dy = yPx - otherY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < radius + otherRadius + padding) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function preloadImages(sources) {
+    return Promise.all(
+        sources.map((src) => new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(src);
+            img.onerror = (err) => reject(err);
+            img.src = src;
+        }))
+    );
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    const body = document.body;
+    const overlay = document.getElementById('loading-overlay');
+    const uniqueImages = Array.from(new Set([treeImage, ...starImages, ...baubleImages]));
+
+    const startApp = () => {
+        body.classList.remove('is-preloading');
+        overlay?.classList.add('hidden');
+        initializeApp();
+    };
+
+    preloadImages(uniqueImages)
+        .then(startApp)
+        .catch((error) => {
+            console.warn('Image preloading encountered an issue:', error);
+            startApp();
+        });
+});
+
+function initializeApp() {
     const date = new Date();
     const dateElement = document.getElementById('date');
     dateElement.textContent = date.toLocaleDateString('en-US', {
@@ -329,4 +409,4 @@ document.addEventListener('DOMContentLoaded', () => {
     creditsDropdown.addEventListener('click', (e) => {
         e.stopPropagation();
     });
-});
+}
