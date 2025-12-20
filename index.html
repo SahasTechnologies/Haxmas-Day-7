@@ -1,0 +1,61 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <title>Haxmas Day 7</title>
+    <link rel="stylesheet" href="styles.css">  
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@400;700&display=swap" rel="stylesheet">
+</head>  
+<body>  
+    <div id="header">  
+        <h1 class="important-text">Haxmas Day 7</h1>  
+        <h2 id="date"></h2>  
+        <p id="countdown" aria-live="polite"></p>
+    </div>
+
+    <div id="demo">
+        <div id="tree-container" class="container">
+            <img id="tree" src="images/tree.png" alt="Christmas tree">
+            <img id="star" src="images/stars/star1.png" alt="Tree topper star">
+            <div id="decorations" aria-label="Ornaments"></div>
+        </div>
+        <div class="button-container">
+            <button id="decorate-button">Decorate the Tree!</button>
+            <button id="change-star-button">Change the Star</button>
+        </div>
+    </div>
+
+    <div id="footer">  
+        <div id="credits-dropdown">
+            <button id="credits-button">Credits</button>
+            <div id="credits-content">
+                <h3 class="important-text">made by Sahas</h3>
+                <p class="credits-note">Links to all images:</p>
+                <ul>
+                    <li><a href="https://www.amazon.com.au/Christmas-Topper-Glittered-Hollow-Decoration/dp/B0DDKFHSXB?source=ps-sl-shoppingads-lpcontext&ref_=fplfs&psc=1&smid=A2WMM5YUD2YNKC">Christmas Tree Topper, 10&quot; Gold Glittered Star with Hollow Design, Tree Topper Star for Christmas Tree Decoration</a></li>
+                    <li><a href="https://www.christmaselves.com.au/red-gold-christmas-bauble-decor-39cm/?srsltid=AfmBOooScW3VK2ANoAwfR_0Z-JxXWrCgUJzwTG_022jLIdbPIaBWGGwH">Red Gold Christmas Bauble</a></li>
+                    <li><a href="https://www.realchristmastrees.com.au/stella-navy-gold-hanging-bauble-with-stars-8cm?srsltid=AfmBOorsMd3VhfkdN6VQSJQWXVFSSvM2A1MdDHSOu04ShJUMKBrC8-ex">Stella Navy Gold Hanging Bauble</a></li>
+                    <li><a href="https://christmas360.com.au/product/bauble-with-candle-design-20cm-light-up/?srsltid=AfmBOorJY8FfXuxQuIZjKxySMotuKCaKT-oFE-LNs2zK-4jC4JUKhKNy">Bauble with Candle Design</a></li>
+                    <li><a href="https://www.holyart.co.uk/christmas/christmas-tree-decorations/christmas-balls/christmas-bauble-blue-landscape-with-snow-15cm">Christmas Bauble Blue Landscape</a></li>
+                    <li><a href="https://www.bestofhungary.co.uk/products/christmas-tree-bauble-winter-landscape-blue?srsltid=AfmBOorTRQaNI60gFnBRvnH4f5gVpSDwLIvveB8wFpBitvsTpVrUxnuN">Christmas Tree Bauble Winter Landscape</a></li>
+                    <li><a href="https://theoldechristmasshoppe.co.uk/shop/for-the-tree/red-gold-green-baubles/classical-matt-red-with-green-christmas-tree-design-bauble/?srsltid=AfmBOoo6pjlUmxr10BOJErLCkwrqekWFBhdHnrdQO_dIZoBYze340usc">Classical Matt Red with Green Christmas Tree Design Bauble</a></li>
+                    <li><a href="https://www.sydneyschristmasbarn.com.au/80mm-metallic-blue-with-silver-glitter-glass-christmas-tree-bauble/">80mm Metallic Blue with Silver Glitter Glass Christmas Tree Bauble</a></li>
+                    <li><a href="https://swishcollection.com.au/product/christmas-bauble-blue-glass-with-etched-leaf-pattern-8cm/">Christmas Bauble Blue Glass with Etched Leaf Pattern</a></li>
+                    <li><a href="https://www.kaethe-wohlfahrt.com/en/tree-deco/glass-tree-decorations/glass-bauble-matte-red-8-cm/?srsltid=AfmBOopmFpaMBaTSzwrzqj3ZBQkOEzI1SXKl8ZYCsHIwWwHHfXz_R5Ul">Glass Bauble Matte Red</a></li>
+                    <li><a href="https://thepalmier.com.au/products/30-cm-champagne-glitter-bauble?srsltid=AfmBOoqFlprFPw1CLX27cLHKXcRu3U0Sbx1Tvz5BloT57_WljGLMbH7n">30 cm Champagne Glitter Bauble</a></li>
+                    <li><a href="https://www.templeandwebster.com.au/Royal-Deluxe-Pre-Lit-Christmas-Tree-TMPL3380.html">Royal Deluxe Pre-Lit Christmas Tree</a></li>
+                    <li><a href="https://www.ebay.com.au/itm/376773052849">Shiny Christmas Tree Topper Star, 1 X 20 Cm / 7.87 Inch Gold Christmas Tree Topper</a></li>
+                    <li><a href="https://thechristmastreecompany.com.au/product/silver-tree-top-star-30-cm/">Silver Tree Top Star – 30 cm</a></li>
+                    <li><a href="https://www.amazon.de/-/en/Christmas-Tree-Topper-Small-Decoration/dp/B0CHB4PW53">Christmas Tree Topper Star, Mini Tree Topper Star, 6 cm</a></li>
+                    <li><a href="https://www.christmasdecorationsbrisbane.com.au/products/tree-topper-8-point-star-glitter-gold-80cm">Tree Topper 8 Point Star Glitter Gold 80cm</a></li>
+                    <li><a href="https://www.myer.com.au/p/heirloom-3d-glitter-gold-star-tree-topper-610429690">Heirloom Christmas 3D Glitter Gold Star Tree Topper</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>  
+</html>
