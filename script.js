@@ -6,6 +6,7 @@ const starImages = [
     "images/stars/star5.png",
     "images/stars/star6.png"
 ];
+
 const baubleImages = [
     "images/ornaments/1.png",
     "images/ornaments/2.png",
@@ -20,393 +21,311 @@ const baubleImages = [
 ];
 
 const treeImage = "images/tree.png";
-const baublePlacements = [];
+const placements = [];
+let maskCanvas = null;
+let maskCtx = null;
+let maskReady = false;
 
-let treeMaskCanvas = null;
-let treeMaskCtx = null;
-let treeMaskReady = false;
+const random = (min, max) => Math.random() * (max - min) + min;
 
 function clearDecorations() {
-    const decorationsContainer = document.getElementById('decorations');
-    decorationsContainer.innerHTML = '';
-    baublePlacements.length = 0;
+    const container = document.getElementById('decorations');
+    container.innerHTML = '';
+    placements.length = 0;
 }
 
-function randomBetween(min, max) {
-    return Math.random() * (max - min) + min;
-}
-
-function isTreePixelOpaque(localX, localY) {
-    if (!treeMaskReady || !treeMaskCtx || !treeMaskCanvas) return true;
-
-    const x = Math.floor(localX);
-    const y = Math.floor(localY);
-    if (x < 0 || y < 0 || x >= treeMaskCanvas.width || y >= treeMaskCanvas.height) return false;
-
-    const data = treeMaskCtx.getImageData(x, y, 1, 1).data;
-    const alpha = data[3];
-    return alpha > 10;
-}
-
-function samplePointOnTreeImage() {
-    const container = document.getElementById('tree-container');
-    const tree = document.getElementById('tree');
-    const containerRect = container.getBoundingClientRect();
-    const treeRect = tree.getBoundingClientRect();
-
-    if (containerRect.width === 0 || containerRect.height === 0 || treeRect.width === 0 || treeRect.height === 0) {
-        return { xPercent: 50, yPercent: 60 };
+function isOpaque(x, y) {
+    if (!maskReady || !maskCtx) return true;
+    
+    const pixelX = Math.floor(x);
+    const pixelY = Math.floor(y);
+    
+    if (pixelX < 0 || pixelY < 0 || pixelX >= maskCanvas.width || pixelY >= maskCanvas.height) {
+        return false;
     }
 
-    const treeLeft = treeRect.left - containerRect.left;
-    const treeTop = treeRect.top - containerRect.top;
+    const data = maskCtx.getImageData(pixelX, pixelY, 1, 1).data;
+    return data[3] > 10;
+}
 
-    // Try a bunch of random points until we land on a non-transparent pixel.
+function getPointOnTree() {
+    const container = document.getElementById('tree-container');
+    const tree = document.getElementById('tree');
+    const cRect = container.getBoundingClientRect();
+    const tRect = tree.getBoundingClientRect();
+
+    const offsetX = tRect.left - cRect.left;
+    const offsetY = tRect.top - cRect.top;
+
     for (let i = 0; i < 200; i++) {
-        const xInTree = randomBetween(0, treeRect.width);
-        const yInTree = randomBetween(0, treeRect.height);
+        const randX = random(0, tRect.width);
+        const randY = random(0, tRect.height);
 
-        const localX = (xInTree / treeRect.width) * (treeMaskCanvas ? treeMaskCanvas.width : 1);
-        const localY = (yInTree / treeRect.height) * (treeMaskCanvas ? treeMaskCanvas.height : 1);
+        const maskX = (randX / tRect.width) * maskCanvas.width;
+        const maskY = (randY / tRect.height) * maskCanvas.height;
 
-        if (isTreePixelOpaque(localX, localY)) {
-            const xInContainer = treeLeft + xInTree;
-            const yInContainer = treeTop + yInTree;
-
+        if (isOpaque(maskX, maskY)) {
             return {
-                xPercent: (xInContainer / containerRect.width) * 100,
-                yPercent: (yInContainer / containerRect.height) * 100
+                x: ((offsetX + randX) / cRect.width) * 100,
+                y: ((offsetY + randY) / cRect.height) * 100
             };
         }
     }
-
-    // Fallback (should rarely happen)
-    return { xPercent: 50, yPercent: 60 };
+    return { x: 50, y: 60 };
 }
 
-function addBauble() {
-    const decorationsContainer = document.getElementById('decorations');
+function hasOverlap(point, size, containerRect) {
+    const x = (point.x / 100) * containerRect.width;
+    const y = (point.y / 100) * containerRect.height;
+    const radius = size / 2;
+
+    return placements.some(p => {
+        const px = (p.x / 100) * containerRect.width;
+        const py = (p.y / 100) * containerRect.height;
+        const dist = Math.hypot(x - px, y - py);
+        return dist < (radius + (p.size / 2) + 6);
+    });
+}
+
+function createBauble() {
     const container = document.getElementById('tree-container');
-    const containerRect = container.getBoundingClientRect();
-    const img = document.createElement('img');
-    img.className = 'ornament';
-    img.alt = 'Bauble ornament';
-
-    const randomImg = baubleImages[Math.floor(Math.random() * baubleImages.length)];
-
-    img.src = randomImg;
-    img.dataset.imageSrc = randomImg;
-
+    const cRect = container.getBoundingClientRect();
     const tree = document.getElementById('tree');
-    const treeRect = tree.getBoundingClientRect();
-    const scale = treeRect.height > 0 ? (treeRect.height / 1120) : 1;
-    const minSize = Math.max(30, 50 * scale);
-    const maxSize = Math.max(minSize + 15, 80 * scale);
-    const size = randomBetween(minSize, maxSize);
-    img.style.width = `${size}px`;
-    img.style.height = `${size}px`;
+    const tRect = tree.getBoundingClientRect();
 
-    let placement = null;
-    for (let attempt = 0; attempt < 250; attempt++) {
-        const candidate = samplePointOnTreeImage();
-        if (!overlapsExistingBauble(candidate, size, containerRect)) {
-            placement = candidate;
+    const scale = tRect.height > 0 ? (tRect.height / 1120) : 1;
+    const size = random(30 * scale, (30 * scale) + 15); // Simple sizing logic
+
+    let position = null;
+    for (let i = 0; i < 250; i++) {
+        const candidate = getPointOnTree();
+        if (!hasOverlap(candidate, size, cRect)) {
+            position = candidate;
             break;
         }
     }
 
-    if (!placement) {
-        return;
-    }
+    if (!position) return;
 
-    img.style.left = `${placement.xPercent}%`;
-    img.style.top = `${placement.yPercent}%`;
+    const img = document.createElement('img');
+    const src = baubleImages[Math.floor(Math.random() * baubleImages.length)];
+    
+    img.className = 'ornament';
+    img.src = src;
+    img.style.width = `${size}px`;
+    img.style.height = `${size}px`;
+    img.style.left = `${position.x}%`;
+    img.style.top = `${position.y}%`;
 
-    const rotation = randomBetween(-20, 20);
+    const rotation = random(-20, 20);
     img.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
 
-    img.addEventListener('click', function () {
-        const currentRelativeSrc = this.dataset.imageSrc;
-
-        let newRelativeSrc = currentRelativeSrc;
-        while (newRelativeSrc === currentRelativeSrc) {
-            newRelativeSrc = baubleImages[Math.floor(Math.random() * baubleImages.length)];
+    img.addEventListener('click', () => {
+        let newSrc = src;
+        while (newSrc === src) {
+            newSrc = baubleImages[Math.floor(Math.random() * baubleImages.length)];
         }
-        this.dataset.imageSrc = newRelativeSrc;
-        this.src = newRelativeSrc;
-
-        this.style.transform = `translate(-50%, -50%) scale(1.25) rotate(${rotation + 15}deg)`;
+        img.src = newSrc;
+        img.style.transform = `translate(-50%, -50%) scale(1.25) rotate(${rotation + 15}deg)`;
+        
         setTimeout(() => {
-            this.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+            img.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
         }, 250);
     });
 
-    decorationsContainer.appendChild(img);
-    baublePlacements.push({
-        xPercent: placement.xPercent,
-        yPercent: placement.yPercent,
-        size
-    });
+    document.getElementById('decorations').appendChild(img);
+    placements.push({ x: position.x, y: position.y, size });
 }
 
-function positionStarOnTreeTip() {
-    if (!treeMaskReady || !treeMaskCtx || !treeMaskCanvas) return;
+function alignStar() {
+    if (!maskReady || !maskCtx) return;
 
     const container = document.getElementById('tree-container');
     const tree = document.getElementById('tree');
     const star = document.getElementById('star');
+    const cRect = container.getBoundingClientRect();
+    const tRect = tree.getBoundingClientRect();
 
-    const containerRect = container.getBoundingClientRect();
-    const treeRect = tree.getBoundingClientRect();
-
-    if (containerRect.width === 0 || containerRect.height === 0 || treeRect.width === 0 || treeRect.height === 0) return;
-
-    // Find the first row (from top) that has any opaque pixels.
-    // Then average the x positions of opaque pixels on that row to get the "tip" x.
-    const w = treeMaskCanvas.width;
-    const h = treeMaskCanvas.height;
-    let tipY = -1;
+    const w = maskCanvas.width;
+    const h = maskCanvas.height;
+    
     let tipX = w / 2;
+    let tipY = -1;
 
     for (let y = 0; y < h; y++) {
-        let sumX = 0;
+        let xSum = 0;
         let count = 0;
-
-        // Sample every 2 pixels for speed.
         for (let x = 0; x < w; x += 2) {
-            const alpha = treeMaskCtx.getImageData(x, y, 1, 1).data[3];
-            if (alpha > 10) {
-                sumX += x;
+            if (maskCtx.getImageData(x, y, 1, 1).data[3] > 10) {
+                xSum += x;
                 count++;
             }
         }
-
         if (count > 0) {
             tipY = y;
-            tipX = sumX / count;
+            tipX = xSum / count;
             break;
         }
     }
 
     if (tipY < 0) return;
 
-    const containerLeft = containerRect.left;
-    const containerTop = containerRect.top;
-    const treeLeftInContainer = treeRect.left - containerLeft;
-    const treeTopInContainer = treeRect.top - containerTop;
+    const finalX = (tRect.left - cRect.left) + ((tipX / w) * tRect.width);
+    const finalY = (tRect.top - cRect.top) + ((tipY / h) * tRect.height);
 
-    const tipXInTreePixels = (tipX / w) * treeRect.width;
-    const tipYInTreePixels = (tipY / h) * treeRect.height;
-
-    const tipXInContainer = treeLeftInContainer + tipXInTreePixels;
-    const tipYInContainer = treeTopInContainer + tipYInTreePixels;
-
-    // Place the star on the tip but clamp it so it never moves above the container.
-    const starRect = star.getBoundingClientRect();
-    const starHeight = starRect.height || star.naturalHeight || star.offsetHeight || 0;
-    const desiredTop = tipYInContainer - starHeight * 0.75;
-    const topPx = Math.max(0, desiredTop);
-
-    star.style.left = `${tipXInContainer}px`;
-    star.style.top = `${topPx}px`;
+    const starH = star.offsetHeight || 0;
+    star.style.left = `${finalX}px`;
+    star.style.top = `${Math.max(0, finalY - (starH * 0.75))}px`;
 }
 
-function decorateTree() {
+function runDecoration() {
     clearDecorations();
-
     const tree = document.getElementById('tree');
-    if (!tree.complete || !treeMaskReady) {
-        setTimeout(decorateTree, 100);
+    
+    if (!tree.complete || !maskReady) {
+        setTimeout(runDecoration, 100);
         return;
     }
 
-    const date = new Date();
-    const days = date.getDate();
-    const month = date.getMonth() + 1;
-    let numOrnaments = 12; // Default for non-December months
-    if (month === 12) {
-        if (days <= 25) {
-            numOrnaments = 25 - days;
-        } else {
-            // After Dec 25th, spawn a random number of baubles otherwise tbh itll bug out
-            numOrnaments = Math.floor(Math.random() * 16) + 10; // Random number between 10 and 25
-        }
+    const now = new Date();
+    const isDec = now.getMonth() === 11;
+    const day = now.getDate();
+    
+    let limit = 12;
+    if (isDec) {
+        limit = day <= 25 ? (25 - day) : Math.floor(random(10, 26));
     }
 
-    for (let i = 0; i < numOrnaments; i++) {
-        addBauble();
+    for (let i = 0; i < limit; i++) {
+        createBauble();
     }
 }
 
-function overlapsExistingBauble(candidate, sizePx, containerRect) {
-    if (!containerRect || containerRect.width === 0 || containerRect.height === 0) {
-        return false;
-    }
+function startCountdown() {
+    const el = document.getElementById('countdown');
+    if (!el) return;
 
-    const padding = 6;
-    const xPx = (candidate.xPercent / 100) * containerRect.width;
-    const yPx = (candidate.yPercent / 100) * containerRect.height;
-    const radius = sizePx / 2;
-
-    for (const placement of baublePlacements) {
-        const otherX = (placement.xPercent / 100) * containerRect.width;
-        const otherY = (placement.yPercent / 100) * containerRect.height;
-        const otherRadius = placement.size / 2;
-        const dx = xPx - otherX;
-        const dy = yPx - otherY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < radius + otherRadius + padding) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-function preloadImages(sources) {
-    return Promise.all(
-        sources.map((src) => new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve(src);
-            img.onerror = (err) => reject(err);
-            img.src = src;
-        }))
-    );
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const body = document.body;
-    const overlay = document.getElementById('loading-overlay');
-    const uniqueImages = Array.from(new Set([treeImage, ...starImages, ...baubleImages]));
-
-    const startApp = () => {
-        body.classList.remove('is-preloading');
-        overlay?.classList.add('hidden');
-        initializeApp();
-    };
-
-    preloadImages(uniqueImages)
-        .then(startApp)
-        .catch((error) => {
-            console.warn('Image preloading encountered an issue:', error);
-            startApp();
-        });
-});
-
-function initializeApp() {
-    const date = new Date();
-    const dateElement = document.getElementById('date');
-    dateElement.textContent = date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-
-    const countdownElement = document.getElementById('countdown');
-
-    function updateCountdown() {
-        if (!countdownElement) return;
+    const update = () => {
         const now = new Date();
-        let targetYear = now.getFullYear();
-        let target = new Date(targetYear, 11, 25, 0, 0, 0, 0); // December is month 11
-        if (now >= target) {
-            targetYear += 1;
-            target = new Date(targetYear, 11, 25, 0, 0, 0, 0);
+        const year = now.getFullYear();
+        let target = new Date(year, 11, 25);
+        
+        if (now > target) {
+            target = new Date(year + 1, 11, 25);
         }
 
-        const diffMs = target - now;
-        if (diffMs <= 0) {
-            countdownElement.textContent = 'Merry Christmas!';
+        const diff = target - now;
+        if (diff <= 0) {
+            el.textContent = 'Merry Christmas!';
             return;
         }
 
-        const totalSeconds = Math.floor(diffMs / 1000);
-        const days = Math.floor(totalSeconds / 86400);
-        const hours = Math.floor((totalSeconds % 86400) / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((diff / (1000 * 60)) % 60);
+        const s = Math.floor((diff / 1000) % 60);
 
-        countdownElement.textContent = `${days} days ${hours} hours ${minutes} minutes ${seconds} seconds until Christmas`;
-    }
+        el.textContent = `${d} days ${h} hours ${m} minutes ${s} seconds until Christmas`;
+    };
 
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
+    update();
+    setInterval(update, 1000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('loading-overlay');
+    const sources = [...new Set([treeImage, ...starImages, ...baubleImages])];
+
+    const promises = sources.map(src => new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(src);
+        img.onerror = reject;
+        img.src = src;
+    }));
+
+    Promise.all(promises).then(() => {
+        document.body.classList.remove('is-preloading');
+        if (overlay) overlay.classList.add('hidden');
+        init();
+    }).catch(() => {
+        document.body.classList.remove('is-preloading');
+        if (overlay) overlay.classList.add('hidden');
+        init();
+    });
+});
+
+function init() {
+    const dateEl = document.getElementById('date');
+    dateEl.textContent = new Date().toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    startCountdown();
 
     const tree = document.getElementById('tree');
-    tree.addEventListener('load', () => {
-        treeMaskCanvas = document.createElement('canvas');
-        treeMaskCanvas.width = tree.naturalWidth;
-        treeMaskCanvas.height = tree.naturalHeight;
-        treeMaskCtx = treeMaskCanvas.getContext('2d', { willReadFrequently: true });
-        treeMaskCtx.drawImage(tree, 0, 0);
-        treeMaskReady = true;
-
-        positionStarOnTreeTip();
-    });
+    
+    const prepareMask = () => {
+        maskCanvas = document.createElement('canvas');
+        maskCanvas.width = tree.naturalWidth;
+        maskCanvas.height = tree.naturalHeight;
+        maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+        maskCtx.drawImage(tree, 0, 0);
+        maskReady = true;
+        alignStar();
+    };
 
     if (tree.complete) {
-        treeMaskCanvas = document.createElement('canvas');
-        treeMaskCanvas.width = tree.naturalWidth;
-        treeMaskCanvas.height = tree.naturalHeight;
-        treeMaskCtx = treeMaskCanvas.getContext('2d', { willReadFrequently: true });
-        treeMaskCtx.drawImage(tree, 0, 0);
-        treeMaskReady = true;
-
-        positionStarOnTreeTip();
+        prepareMask();
+    } else {
+        tree.addEventListener('load', prepareMask);
     }
 
-    window.addEventListener('resize', () => {
-        positionStarOnTreeTip();
-    });
+    window.addEventListener('resize', alignStar);
 
     const star = document.getElementById('star');
     if (star) {
         star.addEventListener('click', () => {
-            const randomImg = starImages[Math.floor(Math.random() * starImages.length)];
-            star.src = randomImg;
+            star.src = starImages[Math.floor(Math.random() * starImages.length)];
         });
-        if (star.complete) {
-            positionStarOnTreeTip();
-        } else {
-            star.addEventListener('load', positionStarOnTreeTip);
-        }
+        
+        if (star.complete) alignStar();
+        else star.addEventListener('load', alignStar);
     }
 
-    const button = document.getElementById('decorate-button');
-    const changeStarButton = document.getElementById('change-star-button');
+    const decorateBtn = document.getElementById('decorate-button');
     let decorated = false;
-
-    changeStarButton.addEventListener('click', () => {
-        const star = document.getElementById('star');
-        const randomImg = starImages[Math.floor(Math.random() * starImages.length)];
-        star.src = randomImg;
-    });
-
-    button.addEventListener('click', () => {
+    
+    decorateBtn.addEventListener('click', () => {
         if (!decorated) {
-            decorateTree();
-            button.textContent = 'Take it down';
+            runDecoration();
+            decorateBtn.textContent = 'Take it down';
             decorated = true;
         } else {
             clearDecorations();
-            button.textContent = 'Decorate the Tree!';
+            decorateBtn.textContent = 'Decorate the Tree!';
             decorated = false;
         }
     });
 
-    const creditsDropdown = document.getElementById('credits-dropdown');
-    const creditsButton = document.getElementById('credits-button');
+    const changeStarBtn = document.getElementById('change-star-button');
+    changeStarBtn.addEventListener('click', () => {
+        const starEl = document.getElementById('star');
+        starEl.src = starImages[Math.floor(Math.random() * starImages.length)];
+    });
 
-    creditsButton.addEventListener('click', (e) => {
+    const creditsBtn = document.getElementById('credits-button');
+    const creditsDrop = document.getElementById('credits-dropdown');
+
+    creditsBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        creditsDropdown.classList.toggle('open');
+        creditsDrop.classList.toggle('open');
     });
 
     document.addEventListener('click', () => {
-        creditsDropdown.classList.remove('open');
+        creditsDrop.classList.remove('open');
     });
 
-    creditsDropdown.addEventListener('click', (e) => {
+    creditsDrop.addEventListener('click', (e) => {
         e.stopPropagation();
     });
 }
